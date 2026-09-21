@@ -1,0 +1,11 @@
+# Provenance record: one entry per source document.
+# Fill in when you download each file (step 2).
+# Fields: file, title, publisher, url, version_in_force, downloaded_on, notes
+sources:
+  - file: kdsg_2026.pdf
+    title: Kantonales Datenschutzgesetz (KDSG), BSG 152.04
+    publisher: Kanton Bern (BELEX)
+    url:
+    version_in_force: 2026-09-01
+    downloaded_on:
+    notes: revised law, main corpus

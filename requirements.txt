@@ -1,0 +1,21 @@
+# Core RAG stack
+llama-index>=0.12
+llama-index-vector-stores-chroma
+llama-index-embeddings-huggingface
+llama-index-llms-gemini
+llama-index-llms-mistralai
+chromadb>=0.5
+sentence-transformers>=3.0
+pymupdf>=1.24
+pyyaml
+
+# Evaluation
+ragas>=0.2
+datasets
+
+# App and tooling
+streamlit
+python-dotenv
+pytest
+jupyter
+pandas
