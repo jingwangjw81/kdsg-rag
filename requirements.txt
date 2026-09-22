@@ -2,7 +2,7 @@
 llama-index>=0.12
 llama-index-vector-stores-chroma
 llama-index-embeddings-huggingface
-llama-index-llms-gemini
+llama-index-llms-google-genai
 llama-index-llms-mistralai
 chromadb>=0.5
 sentence-transformers>=3.0
