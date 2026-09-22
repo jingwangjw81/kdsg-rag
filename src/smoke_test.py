@@ -10,8 +10,8 @@ ok_g = check("GOOGLE_API_KEY")
 ok_m = check("MISTRAL_API_KEY")
 
 if ok_g:
-    from llama_index.llms.gemini import Gemini
-    r = Gemini(model="models/gemini-2.0-flash").complete("Antworte mit einem Wort: Bern?")
+    from llama_index.llms.google_genai import GoogleGenAI
+    r = GoogleGenAI(model="models/gemini-2.5-flash").complete("Antworte mit einem Wort: Bern?")
     print("Gemini:", str(r).strip())
 
 if ok_m:
