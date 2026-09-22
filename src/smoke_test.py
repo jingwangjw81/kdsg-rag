@@ -16,7 +16,7 @@ if ok_g:
 
 if ok_m:
     from llama_index.llms.mistralai import MistralAI
-    r = MistralAI(model="ministral-3b-2512").complete("Antworte mit einem Wort: Bern?")
+    r = MistralAI(model="codestral-2508").complete("Antworte mit einem Wort: Bern?")
     print("Mistral:", str(r).strip())
 
     # llm = MistralAI(model="mistral-small-latest")
