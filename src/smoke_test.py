@@ -11,13 +11,13 @@ ok_m = check("MISTRAL_API_KEY")
 
 if ok_g:
     from llama_index.llms.google_genai import GoogleGenAI
-    # r = GoogleGenAI(model="models/gemini-2.5-flash").complete("Antworte mit einem Wort: Bern?")
-    # print("Gemini:", str(r).strip())
+    r = GoogleGenAI(model="models/gemini-3.6-flash").complete("Antworte mit einem Wort: Bern?")
+    print("Gemini:", str(r).strip())
 
 if ok_m:
     from llama_index.llms.mistralai import MistralAI
-    r = MistralAI(model="codestral-2508").complete("Antworte mit einem Wort: Bern?") # Not working: mistral-small-2506, mistral-small-latest
-    print("Mistral:", str(r).strip())
+    # r = MistralAI(model="codestral-2508").complete("Antworte mit einem Wort: Bern?") # Not working: mistral-small-2506, mistral-small-latest
+    # print("Mistral:", str(r).strip())
 
     # llm = MistralAI(model="mistral-small-latest")
     # response = llm.complete("Hello")
