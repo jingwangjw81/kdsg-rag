@@ -15,8 +15,25 @@ if ok_g:
     # print("Gemini:", str(r).strip())
 
 if ok_m:
-    from llama_index.llms.mistralai import MistralAI
-    r = MistralAI(model="mistral-small-latest").complete("Antworte mit einem Wort: Bern?")
-    print("Mistral:", str(r).strip())
+    # from llama_index.llms.mistralai import MistralAI
+    # r = MistralAI(model="mistral-small-latest").complete("Antworte mit einem Wort: Bern?")
+    # print("Mistral:", str(r).strip())
+
+    # llm = MistralAI(model="mistral-small-latest")
+    # response = llm.complete("Hello")
+    # print(response)
+
+    from mistralai.client import Mistral
+
+    client = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+
+    response = client.chat.complete(
+        model="mistral-small-latest",
+        messages=[
+            {"role": "user", "content": "Hello"}
+        ],
+    )
+
+    print(response.choices[0].message.content)
 
 print("Smoke test finished.")
