@@ -5,7 +5,7 @@ sources:
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04
   valid_from: 2026-09-01
-  valid_until: 
+  valid_until: null 
   status: in force
   downloaded_on: 2026-09-23
   language: de
@@ -33,7 +33,7 @@ sources:
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.040.1/versions/8
   valid_from: 2026-09-01
-  valid_until: 
+  valid_until: null
   status: in force
   downloaded_on: 2026-09-23
   language: de
@@ -61,13 +61,13 @@ sources:
   publisher: Kanton Bern
   url: https://www.rrgr-service.apps.be.ch/api/gr/documents/document/ccd5b3da4d704efbb4b2bfebad45362d-332/2/2020.KAIO.134-referendumsfassung-de.pdf
   valid_from: 2026-11-01
-  valid_until:
+  valid_until: null
   status: adopted, not yet in force
   downloaded_on: 2026-09-23
   language: de
   role: related
   sha256: 92349f8174192d8781bf1ea27b2eafae889449cf56d80c799ae4dbe84a6970b5
-  notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
+  notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG number not yet assigned, recheck after 2026-11-01
 
 - file: 6_IDSV.pdf
   title: Verordnung über die Informations- und Datensicherheit (IDSV)
@@ -75,21 +75,21 @@ sources:
   publisher: Kanton Bern
   url: https://www.rrgr-service.apps.be.ch/api/rr/documents/document/b6216b3ed64a4c628d355b310c3a3934-332/9/RRB-09.09.2026-de.pdf
   valid_from: 2026-11-01
-  valid_until:
+  valid_until: null
   status: adopted, not yet in force
   downloaded_on: 2026-09-23
   language: de
   role: related
   sha256: eb8e9074a61cd75cc6728fb71dc63eb6218ff3727c605166e2c830a372b29039
-  notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
+  notes: Adopted by Regierungsrat (RRB 09.09.2026), in force from 01.11.2026, BSG number not yet assigned, recheck after 2026-11-01
 
 - file: 7_DSG.pdf
   title: Bundesgesetz über den Datenschutz
   publisher: Die Bundesversammlung der Schweizerischen Eidgenossenschaft (FEDLEX)
   legal_ref: SR 235.1
   url: https://www.fedlex.admin.ch/eli/oc/2022/491/de
-  valid_from: 2020-09-25
-  valid_until:
+  valid_from: 2023-09-01
+  valid_until: null
   status: in force
   downloaded_on: 2026-09-23
   language: de
@@ -103,13 +103,13 @@ sources:
   publisher: Amt für Informatik und Organisation des Kantons Bern (KAIO)
   url: https://www.kaio.fin.be.ch/content/dam/kaio/dokumente/de/startseite/themen/rechtliche-grundlagen/isds/Weisung%20%C3%BCber%20den%20Grundschutz%20f%C3%BCr%20die%20Informations-.pdf
   valid_from: 2025-07-09
-  valid_until:
+  valid_until: null
   status: in force, replacement announced
   downloaded_on: 2026-09-23
   language: de
   role: guidance
   sha256: 59b3915c141eef3c2755b3a61f808c5c6fc73bb2ae0b3b9d129f88c7f48ea94e
-  notes: in force,to be replaced by Grundschutz BE, expected Q1 2027
+  notes: in force, to be replaced by Grundschutz BE, expected Q1 2027, date of signature taken as entry into force
 
 - file: 9_AGB_ISDS_BE.pdf
   title: Allgemeine Geschäftsbedingungen des Kantons Bern über die Informationssicherheit
@@ -118,10 +118,10 @@ sources:
   publisher: Amt für Informatik und Organisation des Kantons Bern (KAIO)
   url: https://www.kaio.fin.be.ch/content/dam/kaio/dokumente/de/startseite/themen/rechtliche-grundlagen/isds/AGB%20ISDS%20BE%20de.pdf
   valid_from: 2025-07-09
-  valid_until:
+  valid_until: null
   status: in force, replacement announced
   downloaded_on: 2026-09-23
   language: de
   role: guidance
   sha256: 6b5ef0bbc85aaf03801a932d71a2566df59dd665f5696a5f0dff9f1c959a5299
-  notes: in force,to be replaced by Grundschutz BE, expected Q1 2027
+  notes: in force, to be replaced by Grundschutz BE, expected Q1 2027, version of 2025-07-09, first issued 2024-08-26, revised 2024-12-16 and 2025-07-09
