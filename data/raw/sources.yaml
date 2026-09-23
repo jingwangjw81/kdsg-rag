@@ -1,5 +1,5 @@
 sources:
-- file: 1_KDSG_BSG_152.04_new.pdf
+- file: 1_KDSG_new.pdf
   title: Kantonales Datenschutzgesetz (KDSG)
   legal_ref: BSG 152.04
   publisher: Kanton Bern (BELEX)
@@ -13,7 +13,7 @@ sources:
   sha256: 0775e94dd9db12ebf7d385f484e88ca1986b5ba798f233a28bbb929df5ff5bfa
   notes: revised law, main corpus
 
-- file: 2_KDSG_BSG_152.04_old.pdf
+- file: 2_KDSG_old.pdf
   title: Kantonales Datenschutzgesetz (KDSG)
   legal_ref: BSG 152.04
   publisher: Kanton Bern (BELEX)
@@ -27,7 +27,7 @@ sources:
   sha256: 943a5d17773512d76a3d14710443419320be45941d6ebb09a57a2cbe96cb79d5
   notes: old law
 
-- file: 3_KDSV_BSG_152.040.1_new.pdf
+- file: 3_KDSV_new.pdf
   title: Kantonale Datenschutzverordnung (KDSV)
   legal_ref: BSG 152.040.1
   publisher: Kanton Bern (BELEX)
@@ -41,7 +41,7 @@ sources:
   sha256: 5e589b8df41dd3b5bf4f5a6ba5238e6e8b22581983cd635167f19e613788caab
   notes: revised law, main corpus
 
-- file: 4_DSV_BSG_152.040.1_old.pdf
+- file: 4_DSV_old.pdf
   title: Datenschutzverordnung (DSV)
   legal_ref: BSG 152.040.1
   publisher: Kanton Bern (BELEX)
@@ -55,7 +55,7 @@ sources:
   sha256: 84d9ae1a214b371d4a1a7dc9ebf78790b178804bec9fccd123ea4e36b0c9cb32
   notes: old law
 
-- file: 5_ICSG_2020.KAIO.134.pdf
+- file: 5_ICSG.pdf
   title: Gesetz über Informations- und Cybersicherheit (ICSG)
   legal_ref: 
   publisher: Kanton Bern
@@ -69,7 +69,7 @@ sources:
   sha256: 92349f8174192d8781bf1ea27b2eafae889449cf56d80c799ae4dbe84a6970b5
   notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
 
-- file: 6_IDSV_2026.pdf
+- file: 6_IDSV.pdf
   title: Verordnung über die Informations- und Datensicherheit (IDSV)
   legal_ref: 
   publisher: Kanton Bern
@@ -83,7 +83,7 @@ sources:
   sha256: eb8e9074a61cd75cc6728fb71dc63eb6218ff3727c605166e2c830a372b29039
   notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
 
-- file: 7_DSG_2025.pdf
+- file: 7_DSG.pdf
   title: Bundesgesetz über den Datenschutz
   publisher: Die Bundesversammlung der Schweizerischen Eidgenossenschaft (FEDLEX)
   legal_ref: SR 235.1
@@ -111,7 +111,7 @@ sources:
   sha256: 59b3915c141eef3c2755b3a61f808c5c6fc73bb2ae0b3b9d129f88c7f48ea94e
   notes: in force,to be replaced by Grundschutz BE, expected Q1 2027
 
-- file: 9_AGB ISDS BE.pdf
+- file: 9_AGB_ISDS_BE.pdf
   title: Allgemeine Geschäftsbedingungen des Kantons Bern über die Informationssicherheit
     und den Datenschutz (AGB ISDS BE)
   legal_ref: 
