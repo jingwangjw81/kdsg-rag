@@ -5,7 +5,7 @@ sources:
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04
   valid_from: 2026-09-01
-  valid_until: null 
+  valid_until: null
   status: in force
   downloaded_on: 2026-09-23
   language: de
@@ -88,14 +88,14 @@ sources:
   publisher: Die Bundesversammlung der Schweizerischen Eidgenossenschaft (FEDLEX)
   legal_ref: SR 235.1
   url: https://www.fedlex.admin.ch/eli/oc/2022/491/de
-  valid_from: 2023-09-01
+  valid_from: 2025-07-07
   valid_until: null
   status: in force
   downloaded_on: 2026-09-23
   language: de
   role: related
   sha256: daab260bddfa3f7e580e1db08d92ba08abd6cf79f0f048d45c3a54703a9dd163
-  notes: current law
+  notes: revised DSG in force since 2023-09-01, consolidated version as of 2025-07-07
 
 - file: 8_ICSGW.pdf
   title: Weisung über den Grundschutz für die Informations- und Cybersicherheit (ICSGW)
