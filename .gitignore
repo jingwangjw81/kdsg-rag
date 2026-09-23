@@ -1,0 +1,8 @@
+.env
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+data/processed/
+data/chroma/
+logs/
+.venv/
