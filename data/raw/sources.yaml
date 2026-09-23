@@ -1,92 +1,127 @@
 sources:
 - file: 1_KDSG_BSG_152.04_new.pdf
-  title: Kantonales Datenschutzgesetz (KDSG), BSG 152.04
+  title: Kantonales Datenschutzgesetz (KDSG)
+  legal_ref: BSG 152.04
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04
-  version_in_force: 01.09.2026
-  downloaded_on: 23.09.2026
+  valid_from: 2026-09-01
+  valid_until: 
+  status: in force
+  downloaded_on: 2026-09-23
   language: de
   role: primary
   sha256: 0775e94dd9db12ebf7d385f484e88ca1986b5ba798f233a28bbb929df5ff5bfa
   notes: revised law, main corpus
+
 - file: 2_KDSG_BSG_152.04_old.pdf
-  title: Kantonales Datenschutzgesetz (KDSG), BSG 152.04
+  title: Kantonales Datenschutzgesetz (KDSG)
+  legal_ref: BSG 152.04
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04/versions/2999
-  version_in_force: 01.02.204 until 31.08.2026
-  downloaded_on: 23.09.2026
+  valid_from: 2024-02-01
+  valid_until: 2026-08-31
+  status: superseded
+  downloaded_on: 2026-09-23
   language: de
   role: historical
   sha256: 943a5d17773512d76a3d14710443419320be45941d6ebb09a57a2cbe96cb79d5
   notes: old law
+
 - file: 3_KDSV_BSG_152.040.1_new.pdf
-  title: Datenschutzverordnung (DSV), BSG 152.040.1
+  title: Kantonale Datenschutzverordnung (KDSV)
+  legal_ref: BSG 152.040.1
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.040.1/versions/8
-  version_in_force: 01.09.2026
-  downloaded_on: 23.09.2026
+  valid_from: 2026-09-01
+  valid_until: 
+  status: in force
+  downloaded_on: 2026-09-23
   language: de
   role: primary
   sha256: 5e589b8df41dd3b5bf4f5a6ba5238e6e8b22581983cd635167f19e613788caab
   notes: revised law, main corpus
+
 - file: 4_DSV_BSG_152.040.1_old.pdf
-  title: Datenschutzverordnung (DSV), BSG 152.040.1
+  title: Datenschutzverordnung (DSV)
+  legal_ref: BSG 152.040.1
   publisher: Kanton Bern (BELEX)
   url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.040.1/versions/2001
-  version_in_force: 01.11.2020 until 31.08.2026
-  downloaded_on: 23.09.2026
+  valid_from: 2020-11-01
+  valid_until: 2026-08-31
+  status: superseded
+  downloaded_on: 2026-09-23
   language: de
   role: historical
   sha256: 84d9ae1a214b371d4a1a7dc9ebf78790b178804bec9fccd123ea4e36b0c9cb32
   notes: old law
+
 - file: 5_ICSG_2020.KAIO.134.pdf
   title: Gesetz über Informations- und Cybersicherheit (ICSG)
+  legal_ref: 
   publisher: Kanton Bern
   url: https://www.rrgr-service.apps.be.ch/api/gr/documents/document/ccd5b3da4d704efbb4b2bfebad45362d-332/2/2020.KAIO.134-referendumsfassung-de.pdf
-  version_in_force: Adopted by Grosser Rat and will entry into force on 01.11.2026, BSG numnber not yet assigned
-  downloaded_on: 23.09.2026
+  valid_from: 2026-11-01
+  valid_until:
+  status: adopted, not yet in force
+  downloaded_on: 2026-09-23
   language: de
-  role: primary
+  role: related
   sha256: 92349f8174192d8781bf1ea27b2eafae889449cf56d80c799ae4dbe84a6970b5
-  notes: adopted and in force from 01.11.2026
+  notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
+
 - file: 6_IDSV_2026.pdf
   title: Verordnung über die Informations- und Datensicherheit (IDSV)
+  legal_ref: 
   publisher: Kanton Bern
   url: https://www.rrgr-service.apps.be.ch/api/rr/documents/document/b6216b3ed64a4c628d355b310c3a3934-332/9/RRB-09.09.2026-de.pdf
-  version_in_force: Adopted by Grosser Rat and will entry into force on 01.11.2026, BSG numnber not yet assigned
-  downloaded_on: 23.09.2026
+  valid_from: 2026-11-01
+  valid_until:
+  status: adopted, not yet in force
+  downloaded_on: 2026-09-23
   language: de
-  role: primary
+  role: related
   sha256: eb8e9074a61cd75cc6728fb71dc63eb6218ff3727c605166e2c830a372b29039
-  notes: adopted and in force from 01.11.2026
+  notes: Adopted by Grosser Rat, in force from 01.11.2026, BSG numnber not yet assigned
+
 - file: 7_DSG_2025.pdf
   title: Bundesgesetz über den Datenschutz
   publisher: Die Bundesversammlung der Schweizerischen Eidgenossenschaft (FEDLEX)
+  legal_ref: SR 235.1
   url: https://www.fedlex.admin.ch/eli/oc/2022/491/de
-  version_in_force: 25.09.2020
-  downloaded_on: 23.09.2026
+  valid_from: 2020-09-25
+  valid_until:
+  status: in force
+  downloaded_on: 2026-09-23
   language: de
-  role: primary
+  role: related
   sha256: daab260bddfa3f7e580e1db08d92ba08abd6cf79f0f048d45c3a54703a9dd163
   notes: current law
+
 - file: 8_ICSGW.pdf
   title: Weisung über den Grundschutz für die Informations- und Cybersicherheit (ICSGW)
+  legal_ref: 
   publisher: Amt für Informatik und Organisation des Kantons Bern (KAIO)
   url: https://www.kaio.fin.be.ch/content/dam/kaio/dokumente/de/startseite/themen/rechtliche-grundlagen/isds/Weisung%20%C3%BCber%20den%20Grundschutz%20f%C3%BCr%20die%20Informations-.pdf
-  version_in_force: 09.07.2025
-  downloaded_on: 23.09.2026
+  valid_from: 2025-07-09
+  valid_until:
+  status: in force, replacement announced
+  downloaded_on: 2026-09-23
   language: de
-  role: primary
+  role: guidance
   sha256: 59b3915c141eef3c2755b3a61f808c5c6fc73bb2ae0b3b9d129f88c7f48ea94e
   notes: in force,to be replaced by Grundschutz BE, expected Q1 2027
+
 - file: 9_AGB ISDS BE.pdf
   title: Allgemeine Geschäftsbedingungen des Kantons Bern über die Informationssicherheit
     und den Datenschutz (AGB ISDS BE)
+  legal_ref: 
   publisher: Amt für Informatik und Organisation des Kantons Bern (KAIO)
   url: https://www.kaio.fin.be.ch/content/dam/kaio/dokumente/de/startseite/themen/rechtliche-grundlagen/isds/AGB%20ISDS%20BE%20de.pdf
-  version_in_force: 09.07.2025
-  downloaded_on: 23.09.2026
+  valid_from: 2025-07-09
+  valid_until:
+  status: in force, replacement announced
+  downloaded_on: 2026-09-23
   language: de
-  role: primary
+  role: guidance
   sha256: 6b5ef0bbc85aaf03801a932d71a2566df59dd665f5696a5f0dff9f1c959a5299
   notes: in force,to be replaced by Grundschutz BE, expected Q1 2027
