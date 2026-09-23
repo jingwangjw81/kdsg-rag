@@ -2,10 +2,35 @@
 # Fill in when you download each file (step 2).
 # Fields: file, title, publisher, url, version_in_force, downloaded_on, notes
 sources:
-  - file: kdsg_2026.pdf
+  - file: 1_KDSG_BSG_152.04_new.pdf
     title: Kantonales Datenschutzgesetz (KDSG), BSG 152.04
     publisher: Kanton Bern (BELEX)
-    url:
+    url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04
     version_in_force: 2026-09-01
-    downloaded_on:
+    downloaded_on: 2026-09-23
+    language: de
+    role: primary
+    sha256: 
+    notes: revised law, main corpus
+
+  - file: 2_KDSG_BSG_152.04_old.pdf
+    title: Kantonales Datenschutzgesetz (KDSG), BSG 152.04
+    publisher: Kanton Bern (BELEX)
+    url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.04/versions/2999
+    version_in_force: 2024-02-01 until 2026-08-31
+    downloaded_on: 2026-09-23
+    language: de
+    role: historical
+    sha256: 
+    notes: old law
+
+  - file: 3_KDSV_BSG_152.040.1_new.pdf
+    title: Datenschutzverordnung (DSV), BSG 152.040.1
+    publisher: Kanton Bern (BELEX)
+    url: https://www.belex.sites.be.ch/app/de/texts_of_law/152.040.1/versions/8
+    version_in_force: 2026-09-01
+    downloaded_on: 2026-09-23
+    language: de
+    role: primary
+    sha256: 
     notes: revised law, main corpus

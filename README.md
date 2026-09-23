@@ -20,3 +20,7 @@ src/             pipeline code
 eval/            test questions and evaluation runs
 tests/           pytest
 ```
+
+## Data Sourcess
+
+All source documents are official legal texts of the Canton of Bern and the Swiss Confederation. Under Art. 5 of the Swiss Copyright Act (URG), laws, ordinances and official decisions are not protected by copyright, so the files are included in this repository unchanged; their origin, version and checksum are recorded in data/raw/sources.yaml.
