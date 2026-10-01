@@ -32,7 +32,10 @@ ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 SECTION_RE = re.compile(r"^\s*Anhang\s+(\d+)\s+(?:zur?\s+)?ICSGW\b.*$", re.MULTILINE)
 
 # Historical BELEX PDFs end with an amendment history whose lines start with "Art. N ... geändert"; cut it off.
-HISTORY_MARKERS = ("Änderungstabelle", "Chronologische Übersicht", "Tabelle der Änderungen")
+# The cut must only trigger on a heading line and must be the last such line.
+HISTORY_RE = re.compile(
+    r"^\s*(Änderungstabelle[n]?|Chronologische Übersicht|Tabelle der Änderungen)\s*(–.*)?$",
+    re.MULTILINE)
 
 # Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
 KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
@@ -52,12 +55,13 @@ def extract_text(pdf_path: pathlib.Path) -> str:
 
 
 def cut_history(text: str) -> str:
-    """Truncate at the first amendment-history heading (historical versions only)."""
+    """Truncate at the last amendment-history heading that stands alone on a line and lies in the
+    second half of the text (BELEX prints a footnote 'Änderungstabellen am Schluss des Erlasses'
+    near the title, which must not trigger the cut)."""
     cut = len(text)
-    for marker in HISTORY_MARKERS:
-        i = text.find(marker)
-        if 0 < i < cut:
-            cut = i
+    for m in HISTORY_RE.finditer(text):
+        if m.start() > len(text) * 0.5:
+            cut = m.start()
     return text[:cut]
 
 
