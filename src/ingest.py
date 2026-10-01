@@ -1,5 +1,5 @@
 """
-Step 3 — ingestion: PDF -> article-level chunks with metadata -> embeddings -> Chroma.
+Step 3 — ingestion: PDF -> section/article-level chunks with metadata -> embeddings -> Chroma.
 
 Usage:
     python src/ingest.py            # ingest everything listed in data/raw/sources.yaml
@@ -10,6 +10,7 @@ Outputs:
     data/chroma/                    persistent vector store (collection "kdsg")
 """
 import argparse, json, pathlib, re, sys
+from collections import Counter
 import yaml
 import pymupdf
 
@@ -17,46 +18,84 @@ RAW = pathlib.Path("data/raw")
 PROCESSED = pathlib.Path("data/processed")
 CHROMA_DIR = pathlib.Path("data/chroma")
 COLLECTION = "kdsg"
-EMBED_MODEL = "intfloat/multilingual-e5-small"   # swap for "BAAI/bge-m3" later if quality is short
+EMBED_MODEL = "intfloat/multilingual-e5-small"   # swap for "BAAI/bge-m3" later if retrieval quality is short
 
-# An article heading in Swiss legal texts: "Art. 21", "Art. 21a", "Art.  5" (extra spaces), start of line.
+MIN_CHUNK_CHARS = 80          # anything shorter is a fragment (cross-reference line, history entry), not a provision
+WINDOW_SIZE, WINDOW_OVERLAP = 1800, 200
+
+# An article heading at line start: "Art. 21", "Art. 21a", "Art.  5".
 ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
+
+# A section (annex) heading at line start, as used in the ICSGW: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW".
+# References inside sentences ("(s. Anhang 1)", "Anhang 1 zu Art. 6 ICSGW") do not match because they are not at line start
+# or have other words between the number and "ICSGW".
+SECTION_RE = re.compile(r"^\s*Anhang\s+(\d+)\s+(?:zur?\s+)?ICSGW\b.*$", re.MULTILINE)
+
+# Historical BELEX PDFs end with an amendment history whose lines start with "Art. N ... geändert"; cut it off.
+HISTORY_MARKERS = ("Änderungstabelle", "Chronologische Übersicht", "Tabelle der Änderungen")
+
+# Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
+KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
 
 
 def extract_text(pdf_path: pathlib.Path) -> str:
-    """Concatenate page text; drop page headers/footers that repeat on every page."""
+    """Concatenate page text; drop page headers/footers that repeat on most pages or are known boilerplate."""
     doc = pymupdf.open(pdf_path)
     pages = [page.get_text("text") for page in doc]
     doc.close()
-    # remove lines that occur on (almost) every page: typically running headers / page numbers
-    from collections import Counter
     line_counts = Counter(l.strip() for p in pages for l in p.splitlines() if l.strip())
     n_pages = max(len(pages), 1)
     boiler = {l for l, c in line_counts.items() if c >= max(3, 0.6 * n_pages)}
-    cleaned = []
-    for p in pages:
-        cleaned.append("\n".join(l for l in p.splitlines() if l.strip() not in boiler))
+    boiler.update(KNOWN_BOILERPLATE)
+    cleaned = ["\n".join(l for l in p.splitlines() if l.strip() not in boiler) for p in pages]
     return "\n".join(cleaned)
 
 
+def cut_history(text: str) -> str:
+    """Truncate at the first amendment-history heading (historical versions only)."""
+    cut = len(text)
+    for marker in HISTORY_MARKERS:
+        i = text.find(marker)
+        if 0 < i < cut:
+            cut = i
+    return text[:cut]
+
+
+def split_sections(text: str):
+    """Yield (section_name or None, section_text). Section marker lines are removed from the text,
+    which also strips the running page headers that repeat the annex title."""
+    pos, section, buf = 0, None, []
+    for m in SECTION_RE.finditer(text):
+        buf.append(text[pos:m.start()])
+        name = f"Anhang {m.group(1)}"
+        if name != section:                 # a new annex starts here
+            yield section, "".join(buf)
+            section, buf = name, []
+        pos = m.end()                       # drop the marker line itself
+    buf.append(text[pos:])
+    yield section, "".join(buf)
+
+
 def split_articles(text: str):
-    """Yield (article_no or None, chunk_text). Text before the first article becomes a 'preamble' chunk."""
-    matches = list(ART_RE.finditer(text))
-    if not matches:
-        yield None, text
-        return
-    if matches[0].start() > 0:
-        pre = text[: matches[0].start()].strip()
-        if pre:
-            yield None, pre
-    for i, m in enumerate(matches):
-        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
-        chunk = text[m.start():end].strip()
-        yield m.group(1), chunk
+    """Yield (section, article_no or None, chunk_text). Text before the first article of a section
+    becomes a 'preamble' chunk; sections without articles become one chunk (windowed later)."""
+    for section, sec_text in split_sections(text):
+        matches = list(ART_RE.finditer(sec_text))
+        if not matches:
+            if sec_text.strip():
+                yield section, None, sec_text.strip()
+            continue
+        if matches[0].start() > 0:
+            pre = sec_text[: matches[0].start()].strip()
+            if pre:
+                yield section, None, pre
+        for i, m in enumerate(matches):
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(sec_text)
+            yield section, m.group(1), sec_text[m.start():end].strip()
 
 
-def window(text: str, size: int = 1800, overlap: int = 200):
-    """Fallback for over-long articles: fixed windows with overlap (character-based)."""
+def window(text: str, size: int = WINDOW_SIZE, overlap: int = WINDOW_OVERLAP):
+    """Fallback for over-long pieces: fixed windows with overlap (character-based)."""
     if len(text) <= size:
         yield text
         return
@@ -75,24 +114,32 @@ def build_chunks():
             print(f"skip (missing): {pdf}", file=sys.stderr)
             continue
         text = extract_text(pdf)
-        n = 0
-        for art, body in split_articles(text):
+        if s.get("role") == "historical":
+            text = cut_history(text)
+        stem = pathlib.Path(s["file"]).stem
+        n = dropped = 0
+        for section, art, body in split_articles(text):
+            sec = (section or "main").replace(" ", "")
             for j, piece in enumerate(window(body)):
+                if len(piece.strip()) < MIN_CHUNK_CHARS:
+                    dropped += 1
+                    continue
                 chunks.append({
-                    "id": f"{pathlib.Path(s['file']).stem}__art{art or 'pre'}__{j}",
+                    "id": f"{stem}__{sec}__art{art or 'pre'}__{j}",
                     "text": piece,
                     "source_file": s["file"],
                     "title": s.get("title"),
+                    "legal_ref": s.get("legal_ref"),
                     "role": s.get("role"),
                     "status": s.get("status"),
-                    "legal_ref": s.get("legal_ref"),
                     "valid_from": str(s.get("valid_from")),
                     "valid_until": str(s.get("valid_until")),
+                    "section": section,
                     "article": art,
                     "part": j,
                 })
                 n += 1
-        print(f"{s['file']}: {n} chunks")
+        print(f"{s['file']}: {n} chunks ({dropped} fragments dropped)")
     return chunks
 
 
@@ -113,8 +160,7 @@ def embed_and_store(chunks):
     from llama_index.vector_stores.chroma import ChromaVectorStore
 
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    # start fresh each run so re-ingestion never leaves stale chunks behind
-    try:
+    try:                                    # start fresh so re-ingestion never leaves stale chunks behind
         client.delete_collection(COLLECTION)
     except Exception:
         pass
