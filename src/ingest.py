@@ -31,11 +31,15 @@ ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 # or have other words between the number and "ICSGW".
 SECTION_RE = re.compile(r"^\s*Anhang\s+(\d+)\s+(?:zur?\s+)?ICSGW\b.*$", re.MULTILINE)
 
-# Historical BELEX PDFs end with an amendment history whose lines start with "Art. N ... geändert"; cut it off.
-# The cut must only trigger on a heading line and must be the last such line.
+# Historical BELEX PDFs end with amendment-history sections whose headings stand alone on a line,
+# e.g. "Änderungstabelle", "Chronologische Übersicht", or "Tabelle der Änderungen".
+# We only trim from the final such heading if it appears in the second half of the document,
+# so ordinary earlier references or title-page notes do not trigger a false cut.
 HISTORY_RE = re.compile(
-    r"^\s*(Änderungstabelle[n]?|Chronologische Übersicht|Tabelle der Änderungen)\s*(–.*)?$",
-    re.MULTILINE)
+    r"^\s*(?:Änderungstabelle[n]?|Chronologische Übersicht|Tabelle der Änderungen)"
+    r"(?:\s*[-–—]\s*.*)?$",
+    re.MULTILINE,
+)
 
 # Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
 KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
