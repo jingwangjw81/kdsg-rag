@@ -26,10 +26,13 @@ WINDOW_SIZE, WINDOW_OVERLAP = 1800, 200
 # An article heading at line start: "Art. 21", "Art. 21a", "Art.  5".
 ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 
-# A section (annex) heading at line start, as used in the ICSGW: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW".
-# References inside sentences ("(s. Anhang 1)", "Anhang 1 zu Art. 6 ICSGW") do not match because they are not at line start
-# or have other words between the number and "ICSGW".
-SECTION_RE = re.compile(r"^\s*Anhang\s+(\d+)\s+(?:zur?\s+)?ICSGW\b.*$", re.MULTILINE)
+# Section markers at line start:
+#  - ICSGW annex headings: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW"
+#  - amendment blocks in any act: "Der Erlass 861.112 Verordnung über ... wird wie folgt geändert:"
+SECTION_RE = re.compile(
+    r"^\s*(?:Anhang\s+(?P<annex>\d+)\s+(?:zur?\s+)?ICSGW\b.*"
+    r"|Der\s+Erlass\s+(?P<amend>\d[\d.]*)\s.*)$",
+    re.MULTILINE)
 
 # Historical BELEX PDFs end with amendment-history sections whose headings stand alone on a line,
 # e.g. "Änderungstabelle", "Chronologische Übersicht", or "Tabelle der Änderungen".
@@ -75,11 +78,11 @@ def split_sections(text: str):
     pos, section, buf = 0, None, []
     for m in SECTION_RE.finditer(text):
         buf.append(text[pos:m.start()])
-        name = f"Anhang {m.group(1)}"
-        if name != section:                 # a new annex starts here
+        name = f"Anhang {m.group('annex')}" if m.group("annex") else f"Änderung {m.group('amend')}"
+        if name != section:
             yield section, "".join(buf)
             section, buf = name, []
-        pos = m.end()                       # drop the marker line itself
+        pos = m.start() if m.group("amend") else m.end()   # keep amendment line, drop annex marker
     buf.append(text[pos:])
     yield section, "".join(buf)
 
