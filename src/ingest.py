@@ -126,14 +126,17 @@ def build_chunks():
             text = cut_history(text)
         stem = pathlib.Path(s["file"]).stem
         n = dropped = 0
+        seen = Counter()                     # (section, article) -> occurrences, to keep ids unique
         for section, art, body in split_articles(text):
             sec = (section or "main").replace(" ", "")
+            seen[(sec, art)] += 1
+            suffix = f"_{seen[(sec, art)]}" if seen[(sec, art)] > 1 else ""
             for j, piece in enumerate(window(body)):
                 if len(piece.strip()) < MIN_CHUNK_CHARS:
                     dropped += 1
                     continue
                 chunks.append({
-                    "id": f"{stem}__{sec}__art{art or 'pre'}__{j}",
+                    "id": f"{stem}__{sec}__art{art or 'pre'}{suffix}__{j}",
                     "text": piece,
                     "source_file": s["file"],
                     "title": s.get("title"),
