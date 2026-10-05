@@ -112,7 +112,6 @@ def window(text: str, size: int = WINDOW_SIZE, overlap: int = WINDOW_OVERLAP):
         yield text[start:start + size]
         start += size - overlap
 
-
 def build_chunks():
     meta = yaml.safe_load((RAW / "sources.yaml").read_text())
     chunks = []
@@ -126,15 +125,16 @@ def build_chunks():
             text = cut_history(text)
         stem = pathlib.Path(s["file"]).stem
         n = dropped = 0
-        seen = Counter()                     # (section, article) -> occurrences, to keep ids unique
+        seen = Counter()                     # (section, article) -> kept occurrences, to keep ids unique
         for section, art, body in split_articles(text):
             sec = (section or "main").replace(" ", "")
+            pieces = [p for p in window(body) if len(p.strip()) >= MIN_CHUNK_CHARS]
+            dropped += sum(1 for _ in window(body)) - len(pieces)
+            if not pieces:
+                continue
             seen[(sec, art)] += 1
             suffix = f"_{seen[(sec, art)]}" if seen[(sec, art)] > 1 else ""
-            for j, piece in enumerate(window(body)):
-                if len(piece.strip()) < MIN_CHUNK_CHARS:
-                    dropped += 1
-                    continue
+            for j, piece in enumerate(pieces):
                 chunks.append({
                     "id": f"{stem}__{sec}__art{art or 'pre'}{suffix}__{j}",
                     "text": piece,
