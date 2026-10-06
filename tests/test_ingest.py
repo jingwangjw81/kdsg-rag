@@ -1,7 +1,7 @@
 import sys, pathlib
 import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from src.ingest import split_articles, window, cut_history, build_chunks
+from src.ingest import split_articles, window, cut_history, build_chunks, cut_toc
 
 SAMPLE = """Kantonales Datenschutzgesetz (KDSG)
 1 Allgemeine Bestimmungen
@@ -70,3 +70,10 @@ def test_real_chunk_ids_unique():
         pytest.skip("corpus not available") 
     ids = [c["id"] for c in build_chunks()]
     assert len(ids) == len(set(ids))
+
+def test_cut_toc_removes_listed_articles():
+    text = ("Anhangtitel\nInhaltsverzeichnis\nArt. 1 Zweck 3\nArt. 2 Begriffe 3\nArt. 3 Verfahren 4\n"
+            "Art. 1 Zweck\nDieser Anhang regelt die Verwendung.\nArt. 2 Begriffe\nIn diesem Anhang bedeuten:\n")
+    out = cut_toc(text)
+    assert out.startswith("Anhangtitel\nArt. 1 Zweck\nDieser")
+    assert out.count("Art. 1") == 1
