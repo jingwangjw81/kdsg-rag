@@ -26,6 +26,10 @@ WINDOW_SIZE, WINDOW_OVERLAP = 1800, 200
 # An article heading at line start: "Art. 21", "Art. 21a", "Art.  5".
 ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 
+# a table-of-contents heading at line start; the TOC lists "Art. N" lines that would
+# otherwise be split as articles (seen in ICSGW Anhang 6).
+TOC_RE = re.compile(r"^\s*Inhalt(?:sverzeichnis)?\s*$", re.MULTILINE)
+
 # Section markers at line start:
 #  - ICSGW annex headings: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW"
 #  - amendment blocks in any act: "Der Erlass 861.112 Verordnung über ... wird wie folgt geändert:"
@@ -34,10 +38,9 @@ SECTION_RE = re.compile(
     r"|Der\s+Erlass\s+(?P<amend>\d[\d.]*)\s.*)$",
     re.MULTILINE)
 
-# Historical BELEX PDFs end with amendment-history sections whose headings stand alone on a line,
-# e.g. "Änderungstabelle", "Chronologische Übersicht", or "Tabelle der Änderungen".
-# We trim from the first such heading if it appears in the second half of the document,
-# so ordinary earlier references or title-page notes do not trigger a false cut.
+# Historical BELEX PDFs end with amendment-history tables whose headings stand alone on a line,
+# e.g. "Änderungstabelle - nach Beschluss" / "- nach Artikel". We trim from the first such heading
+# in the second half of the document, so the title-page footnote does not trigger a false cut.
 HISTORY_RE = re.compile(
     r"^\s*(?:Änderungstabelle[n]?|Chronologische Übersicht|Tabelle der Änderungen)"
     r"(?:\s*[-–—]\s*.*)?$",
@@ -72,9 +75,28 @@ def cut_history(text: str) -> str:
     return text
 
 
+def cut_toc(text: str) -> str:
+    """Remove a table of contents: from the 'Inhaltsverzeichnis' line up to the second occurrence
+    of the first listed article number, which is where the real text begins."""
+    m = TOC_RE.search(text)
+    if not m:
+        return text
+    arts = list(ART_RE.finditer(text, m.end()))
+    if len(arts) < 2:
+        return text
+    first_no = arts[0].group(1)
+    for a in arts[1:]:
+        if a.group(1) == first_no:
+            return text[:m.start()] + text[a.start():]
+    return text
+
+
 def split_sections(text: str):
-    """Yield (section_name or None, section_text). Section marker lines are removed from the text,
-    which also strips the running page headers that repeat the annex title."""
+    """Yield (section_name or None, section_text), cutting at each SECTION_RE match.
+    Annex headings ("Anhang 2 zur ICSGW") are dropped from the text; repeats of the same
+    heading (running page headers) do not open a new section and are dropped too.
+    Amendment lines ("Der Erlass 861.112 ... wird wie folgt geändert") are kept, as they
+    name the amended ordinance. Text before the first marker has section None."""
     pos, section, buf = 0, None, []
     for m in SECTION_RE.finditer(text):
         buf.append(text[pos:m.start()])
@@ -88,12 +110,10 @@ def split_sections(text: str):
 
 
 def split_articles(text: str):
-    """Yield (section_name or None, section_text), cutting at each SECTION_RE match.
-    Annex headings ("Anhang 2 zur ICSGW") are dropped from the text; repeats of the same
-    heading (running page headers) do not open a new section and are dropped too.
-    Amendment lines ("Der Erlass 861.112 ... wird wie folgt geändert") are kept, as they
-    name the amended ordinance. Text before the first marker has section None."""
+    """Yield (section, article_no or None, chunk_text). Text before the first article of a section
+    becomes a 'preamble' chunk; sections without articles become one chunk (windowed later)."""
     for section, sec_text in split_sections(text):
+        sec_text = cut_toc(sec_text)                     # strip a per-section TOC first
         matches = list(ART_RE.finditer(sec_text))
         if not matches:
             if sec_text.strip():
@@ -117,6 +137,7 @@ def window(text: str, size: int = WINDOW_SIZE, overlap: int = WINDOW_OVERLAP):
     while start < len(text):
         yield text[start:start + size]
         start += size - overlap
+
 
 def build_chunks():
     meta = yaml.safe_load((RAW / "sources.yaml").read_text())
