@@ -36,7 +36,7 @@ SECTION_RE = re.compile(
 
 # Historical BELEX PDFs end with amendment-history sections whose headings stand alone on a line,
 # e.g. "Änderungstabelle", "Chronologische Übersicht", or "Tabelle der Änderungen".
-# We only trim from the final such heading if it appears in the second half of the document,
+# We trim from the first such heading if it appears in the second half of the document,
 # so ordinary earlier references or title-page notes do not trigger a false cut.
 HISTORY_RE = re.compile(
     r"^\s*(?:Änderungstabelle[n]?|Chronologische Übersicht|Tabelle der Änderungen)"
@@ -62,14 +62,14 @@ def extract_text(pdf_path: pathlib.Path) -> str:
 
 
 def cut_history(text: str) -> str:
-    """Truncate at the last amendment-history heading that stands alone on a line and lies in the
-    second half of the text (BELEX prints a footnote 'Änderungstabellen am Schluss des Erlasses'
-    near the title, which must not trigger the cut)."""
-    cut = len(text)
+    """Truncate at the first amendment-history heading in the second half of the text.
+    BELEX historical PDFs end with the tables 'Änderungstabelle - nach Beschluss' and
+    '... - nach Artikel'; cutting at the first removes both. The 50% guard skips the
+    footnote 'Änderungstabellen am Schluss des Erlasses' printed near the title."""
     for m in HISTORY_RE.finditer(text):
         if m.start() > len(text) * 0.5:
-            cut = m.start()
-    return text[:cut]
+            return text[:m.start()]
+    return text
 
 
 def split_sections(text: str):
