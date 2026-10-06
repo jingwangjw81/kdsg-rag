@@ -1,6 +1,7 @@
 import sys, pathlib
+import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
-from src.ingest import split_articles, window, cut_history
+from src.ingest import split_articles, window, cut_history, build_chunks
 
 SAMPLE = """Kantonales Datenschutzgesetz (KDSG)
 1 Allgemeine Bestimmungen
@@ -64,3 +65,8 @@ def test_window_overlaps():
     pieces = list(window("x" * 4000, size=1800, overlap=200))
     assert len(pieces) == 3 and all(len(p) <= 1800 for p in pieces)
 
+def test_real_chunk_ids_unique():
+    if not pathlib.Path("data/raw/sources.yaml").exists():
+        pytest.skip("corpus not available") 
+    ids = [c["id"] for c in build_chunks()]
+    assert len(ids) == len(set(ids))
