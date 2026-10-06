@@ -51,7 +51,14 @@ def test_amendment_block_becomes_section():
     assert any(body.startswith("Der Erlass 861.112") for sec, _, body in parts if sec == "Änderung 861.112")
 
 def test_cut_history():
-    assert cut_history("Art. 1 Text\nÄnderungstabelle\nArt. 1 geändert") == "Art. 1 Text\n"
+    text = ("Kantonales Datenschutzgesetz\n* Änderungstabellen am Schluss des Erlasses\n"
+            + "Art. 1 Text des Gesetzes, der lang genug ist.\n" * 10
+            + "Änderungstabelle - nach Beschluss\nBeschluss Inkrafttreten\n"
+            + "Änderungstabelle - nach Artikel\nArt. 1 geändert\n")
+    cut = cut_history(text)
+    assert cut.endswith("lang genug ist.\n")
+    assert "Änderungstabellen am Schluss" in cut          # footnote near the title is not a cut point
+    assert "nach Beschluss" not in cut and "nach Artikel" not in cut
 
 def test_window_overlaps():
     pieces = list(window("x" * 4000, size=1800, overlap=200))
