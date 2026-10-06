@@ -88,8 +88,11 @@ def split_sections(text: str):
 
 
 def split_articles(text: str):
-    """Yield (section, article_no or None, chunk_text). Text before the first article of a section
-    becomes a 'preamble' chunk; sections without articles become one chunk (windowed later)."""
+    """Yield (section_name or None, section_text), cutting at each SECTION_RE match.
+    Annex headings ("Anhang 2 zur ICSGW") are dropped from the text; repeats of the same
+    heading (running page headers) do not open a new section and are dropped too.
+    Amendment lines ("Der Erlass 861.112 ... wird wie folgt geändert") are kept, as they
+    name the amended ordinance. Text before the first marker has section None."""
     for section, sec_text in split_sections(text):
         matches = list(ART_RE.finditer(sec_text))
         if not matches:
