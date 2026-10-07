@@ -17,11 +17,11 @@ import argparse, json, os, re, sys, time
 import chromadb
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 
-from src.ingest import CHROMA_DIR, COLLECTION, EMBED_MODEL
+from ingest import CHROMA_DIR, COLLECTION, EMBED_MODEL
 
 VERSION = "0.1"
 DEFAULT_TOP_K = 5
-MODELS = {"gemini": "gemini-2.5-flash", "mistral": "mistral-small-latest"}
+MODELS = {"gemini": "gemini-3.6-flash", "mistral": "codestral-2508"}
 
 CHANGE_WORDS = re.compile(r"\b(geändert|Änderung|neu\b|alt\b|alte[nrs]?\b|bisher|früher|vorher|Unterschied|revidiert|Revision)",
                           re.IGNORECASE)
