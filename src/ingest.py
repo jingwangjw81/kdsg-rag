@@ -1,6 +1,10 @@
 """
 Step 3 — ingestion: PDF -> section/chapter/article-level chunks with metadata -> embeddings -> Chroma.
 
+Design rule: the extracted text is never rewritten, only parts of it are deleted (repeated headers,
+page numbers, amendment-history tables, tables of contents). Structure (sections, chapters,
+articles) is detected on the text as extracted. Rewrites interact badly with line-anchored rules.
+
 Usage:
     python src/ingest.py            # ingest everything listed in data/raw/sources.yaml
     python src/ingest.py --dry-run  # only extract + chunk, write chunks.jsonl, no embeddings
@@ -30,7 +34,7 @@ ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 # split as articles (seen in ICSGW Anhang 6).
 TOC_RE = re.compile(r"^\s*Inhalt(?:sverzeichnis)?\s*$", re.MULTILINE)
 
-# chapter headings at line start, e.g. "3.2 Register- und Verzeichnispflicht" or "1. Gegenstand".
+
 # Paragraph numbers ("1 Die Behörde darf ...") also start with a digit; find_chapters() excludes them by
 # (a) sentence punctuation at the end, (b) a leading article/pronoun, (c) what follows the line.
 CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,60}?)\s*$")
@@ -59,16 +63,11 @@ HISTORY_RE = re.compile(
     re.MULTILINE,
 )
 
-# A line that is only a number ("1.", "3.2", "5.1.1") or an article label ("Art. 7"): in table-cell layouts
-# (ICSGW Anhang 6, AGB ISDS BE) the title follows on the next line and must be joined back.
-NUM_ONLY_RE = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|Art\.\s*\d+[a-z]?)\s*$")
-
 # Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
 KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
-
-# A line that is only a heading number ("1.", "5.1.1") or an article number ("Art. 3"); in
-# table-cell layouts (ICSGW Anhang 6, AGB ISDS BE) the title follows on the next line.
-NUM_ONLY_RE = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|Art\.\s*\d+[a-z]?)\s*$")
+# A line that is only a page number ("12", "3/20"); each occurs once, so the repetition
+# filter misses it. Deleted so it cannot sit between a chapter heading and its first article.
+PAGE_NO_RE = re.compile(r"^\s*(\d{1,3}|\d+/\d+)\s*$")
 
 
 def extract_text(pdf_path: pathlib.Path) -> str:
@@ -80,25 +79,11 @@ def extract_text(pdf_path: pathlib.Path) -> str:
     n_pages = max(len(pages), 1)
     boiler = {l for l, c in line_counts.items() if c >= max(3, 0.6 * n_pages)}
     boiler.update(KNOWN_BOILERPLATE)
-    cleaned = ["\n".join(l for l in p.splitlines() if l.strip() not in boiler) for p in pages]
+    cleaned = ["\n".join(l for l in p.splitlines()
+                          if l.strip() not in boiler and not PAGE_NO_RE.match(l))   # drop page numbers
+               for p in pages]
     return "\n".join(cleaned)
 
-
-def join_split_headings(text: str) -> str:
-    """'1.' + newline + 'Allgemeine Bestimmungen' -> '1. Allgemeine Bestimmungen', and
-    'Art. 1' + newline + 'Gegenstand' -> 'Art. 1 Gegenstand' (table-cell layout). A number-only
-    line followed by another number-only line or a blank line is left as it is."""
-    lines, out, i = text.split("\n"), [], 0
-    while i < len(lines):
-        cur = lines[i]
-        if (NUM_ONLY_RE.match(cur) and i + 1 < len(lines)
-                and lines[i + 1].strip() and not NUM_ONLY_RE.match(lines[i + 1])):
-            out.append(f"{cur.strip()} {lines[i + 1].strip()}")
-            i += 2
-        else:
-            out.append(cur)
-            i += 1
-    return "\n".join(out)
 
 
 def cut_history(text: str) -> str:
@@ -128,6 +113,7 @@ def cut_toc(text: str) -> str:
     return text
 
 
+
 def _heading_title(line: str):
     """'3.2 Register- und Verzeichnispflicht' -> ('3.2', 'Register- und Verzeichnispflicht'), else None."""
     m = CHAPTER_RE.match(line)
@@ -139,6 +125,7 @@ def _heading_title(line: str):
     if title[-1] in ".:,;-\u00ad" or NOT_HEADING_START.match(title) or SENTENCE_HINT.search(title):
         return None
     return num, title
+
 
 
 def find_chapters(text: str):
@@ -162,10 +149,10 @@ def find_chapters(text: str):
         # A chapter heading sits between articles; a numbered list item inside an article
         # ("1. Cipher Suiten" in a glossary) is preceded by article text. For such candidates the
         # confirming article/heading must be on the very next line, which a list item's
-        # definition text never satisfies.                                              
+        # definition text never satisfies.
         prev = next((x for x in reversed(lines[:i]) if x.strip()), "")
-        structural = (not prev or _heading_title(prev) or ART_RE.match(prev) or NUM_ONLY_RE.match(prev)
-                      or SECTION_RE.match(prev) or re.match(r"^\s*\d+/\d+\s*$", prev))
+        structural = (not prev or _heading_title(prev) or ART_RE.match(prev)
+                      or SECTION_RE.match(prev) or PAGE_NO_RE.match(prev))          
         if has_articles and not structural:
             nxt = next((x for x in lines[i + 1:i + 4] if x.strip()), "")   # next non-blank line
             confirmed = bool(ART_RE.match(nxt) or _heading_title(nxt))
@@ -181,6 +168,7 @@ def find_chapters(text: str):
         if confirmed:
             out.append((offsets[i], f"{h[0]} {h[1]}"))
     return out
+
 
 
 def _depth(title: str) -> int:
@@ -224,24 +212,22 @@ def split_sections(text: str):
 def split_articles(text: str):
     """Yield (section, chapter, article_no or None, chunk_text). Text before the first article of a
     section becomes a 'preamble' chunk; sections without articles become one chunk (windowed later).
-    The chapter is the last chapter heading before the chunk starts ('' if none)."""      
+    The chapter is the last chapter heading before the chunk starts ('' if none)."""
     for section, sec_text in split_sections(text):
-         # join table-cell headings only now, after the history cut and the section split, so that
-         # "Änderungstabelle" headings and "Der Erlass ..." markers are still at line start when matched
-        sec_text = cut_toc(join_split_headings(sec_text))
-        chapters = find_chapters(sec_text)                                            
+        sec_text = cut_toc(sec_text)                                                  
+        chapters = find_chapters(sec_text)
         matches = list(ART_RE.finditer(sec_text))
         if not matches:
             if sec_text.strip():
-                yield section, chapter_at(chapters, 0), None, sec_text.strip()        
+                yield section, chapter_at(chapters, 0), None, sec_text.strip()
             continue
         if matches[0].start() > 0:
             pre = sec_text[: matches[0].start()].strip()
             if pre:
-                yield section, chapter_at(chapters, 0), None, pre                     
+                yield section, chapter_at(chapters, 0), None, pre
         for i, m in enumerate(matches):
             end = matches[i + 1].start() if i + 1 < len(matches) else len(sec_text)
-            yield section, chapter_at(chapters, m.start()), m.group(1), sec_text[m.start():end].strip()  
+            yield section, chapter_at(chapters, m.start()), m.group(1), sec_text[m.start():end].strip()
 
 
 def window(text: str, size: int = WINDOW_SIZE, overlap: int = WINDOW_OVERLAP):
@@ -269,7 +255,7 @@ def build_chunks():
         stem = pathlib.Path(s["file"]).stem
         n = dropped = 0
         seen = Counter()                     # (section, article) -> kept occurrences, to keep ids unique
-        for section, chapter, art, body in split_articles(text):                      
+        for section, chapter, art, body in split_articles(text):
             sec = (section or "main").replace(" ", "")
             pieces = [p for p in window(body) if len(p.strip()) >= MIN_CHUNK_CHARS]
             dropped += sum(1 for _ in window(body)) - len(pieces)
@@ -289,7 +275,7 @@ def build_chunks():
                     "valid_from": str(s.get("valid_from") or ""),
                     "valid_until": str(s.get("valid_until") or ""),
                     "section": section or "",
-                    "chapter": chapter or "",                                          
+                    "chapter": chapter or "",
                     "article": art or "",
                     "part": j,
                 })
@@ -305,6 +291,7 @@ def write_jsonl(chunks):
         for c in chunks:
             f.write(json.dumps(c, ensure_ascii=False) + "\n")
     print(f"wrote {len(chunks)} chunks -> {out}")
+
 
 
 def embed_text(c: dict) -> str:
@@ -328,7 +315,7 @@ def embed_and_store(chunks):
         pass
     collection = client.get_or_create_collection(COLLECTION)
 
-    nodes = [TextNode(id_=c["id"], text=embed_text(c),                                 
+    nodes = [TextNode(id_=c["id"], text=embed_text(c),
                       metadata={k: v for k, v in c.items() if k not in ("id", "text")})
              for c in chunks]
     embed = HuggingFaceEmbedding(model_name=EMBED_MODEL)
