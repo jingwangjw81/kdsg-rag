@@ -1,5 +1,5 @@
 """
-Step 3 — ingestion: PDF -> section/article-level chunks with metadata -> embeddings -> Chroma.
+Step 3 — ingestion: PDF -> section/chapter/article-level chunks with metadata -> embeddings -> Chroma.
 
 Usage:
     python src/ingest.py            # ingest everything listed in data/raw/sources.yaml
@@ -26,9 +26,16 @@ WINDOW_SIZE, WINDOW_OVERLAP = 1800, 200
 # An article heading at line start: "Art. 21", "Art. 21a", "Art.  5".
 ART_RE = re.compile(r"^\s*Art\.\s*(\d+[a-z]?)\b", re.MULTILINE)
 
-# a table-of-contents heading at line start; the TOC lists "Art. N" lines that would
-# otherwise be split as articles (seen in ICSGW Anhang 6).
+# A table-of-contents heading at line start; the TOC lists "Art. N" lines that would otherwise be
+# split as articles (seen in ICSGW Anhang 6).
 TOC_RE = re.compile(r"^\s*Inhalt(?:sverzeichnis)?\s*$", re.MULTILINE)
+
+# chapter headings at line start, e.g. "3.2 Register- und Verzeichnispflicht" or "1. Gegenstand".
+# Paragraph numbers ("1 Die Behörde darf ...") also start with a digit; find_chapters() excludes them by
+# (a) sentence punctuation at the end, (b) a leading article/pronoun, (c) what follows the line.
+CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,80}?)\s*$")
+NOT_HEADING_START = re.compile(r"^(Die|Der|Das|Dies\w*|Sie|Er|Es|In|Im|Für|Bei|Folgende|Wenn|Wer|Aufgehoben)\b")
+PARA_RE = re.compile(r"^\s*\d+\s+\S")          # a paragraph line: digit, space, text
 
 # Section markers at line start:
 #  - ICSGW annex headings: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW"
@@ -91,6 +98,56 @@ def cut_toc(text: str) -> str:
     return text
 
 
+
+def _heading_title(line: str):
+    """'3.2 Register- und Verzeichnispflicht' -> ('3.2', 'Register- und Verzeichnispflicht'), else None."""
+    m = CHAPTER_RE.match(line)
+    if not m:
+        return None
+    title = m.group(2).strip()
+    if title[-1] in ".:,;" or NOT_HEADING_START.match(title):
+        return None
+    return m.group(1), title
+
+
+
+def find_chapters(text: str):
+    """Return [(char_offset, 'number title'), ...] for lines that look like chapter headings.
+    A candidate (CHAPTER_RE, no sentence punctuation, no leading article/pronoun) is accepted only
+    if one of the next two lines is an article line or another heading candidate; in texts without
+    any 'Art.' lines (ICSGW annexes 1-4) a paragraph line also counts as confirmation."""
+    lines = text.split("\n")
+    has_articles = bool(ART_RE.search(text))
+    offsets, pos = [], 0
+    for l in lines:
+        offsets.append(pos)
+        pos += len(l) + 1
+    out = []
+    for i, l in enumerate(lines):
+        h = _heading_title(l)
+        if not h:
+            continue
+        following = lines[i + 1:i + 3]
+        confirmed = any(ART_RE.match(x) or _heading_title(x) for x in following)
+        if not confirmed and not has_articles:
+            confirmed = any(PARA_RE.match(x) for x in following)
+        if confirmed:
+            out.append((offsets[i], f"{h[0]} {h[1]}"))
+    return out
+
+
+
+def chapter_at(chapters, pos: int) -> str:
+    """Title of the last chapter heading that starts at or before pos ('' if none)."""
+    current = ""
+    for p, title in chapters:
+        if p <= pos:
+            current = title
+        else:
+            break
+    return current
+
+
 def split_sections(text: str):
     """Yield (section_name or None, section_text), cutting at each SECTION_RE match.
     Annex headings ("Anhang 2 zur ICSGW") are dropped from the text; repeats of the same
@@ -110,22 +167,24 @@ def split_sections(text: str):
 
 
 def split_articles(text: str):
-    """Yield (section, article_no or None, chunk_text). Text before the first article of a section
-    becomes a 'preamble' chunk; sections without articles become one chunk (windowed later)."""
+    """Yield (section, chapter, article_no or None, chunk_text). Text before the first article of a
+    section becomes a 'preamble' chunk; sections without articles become one chunk (windowed later).
+    The chapter is the last chapter heading before the chunk starts ('' if none)."""      
     for section, sec_text in split_sections(text):
-        sec_text = cut_toc(sec_text)                     # strip a per-section TOC first
+        sec_text = cut_toc(sec_text)
+        chapters = find_chapters(sec_text)                                            
         matches = list(ART_RE.finditer(sec_text))
         if not matches:
             if sec_text.strip():
-                yield section, None, sec_text.strip()
+                yield section, chapter_at(chapters, 0), None, sec_text.strip()        
             continue
         if matches[0].start() > 0:
             pre = sec_text[: matches[0].start()].strip()
             if pre:
-                yield section, None, pre
+                yield section, chapter_at(chapters, 0), None, pre                     
         for i, m in enumerate(matches):
             end = matches[i + 1].start() if i + 1 < len(matches) else len(sec_text)
-            yield section, m.group(1), sec_text[m.start():end].strip()
+            yield section, chapter_at(chapters, m.start()), m.group(1), sec_text[m.start():end].strip()  
 
 
 def window(text: str, size: int = WINDOW_SIZE, overlap: int = WINDOW_OVERLAP):
@@ -153,7 +212,7 @@ def build_chunks():
         stem = pathlib.Path(s["file"]).stem
         n = dropped = 0
         seen = Counter()                     # (section, article) -> kept occurrences, to keep ids unique
-        for section, art, body in split_articles(text):
+        for section, chapter, art, body in split_articles(text):                      
             sec = (section or "main").replace(" ", "")
             pieces = [p for p in window(body) if len(p.strip()) >= MIN_CHUNK_CHARS]
             dropped += sum(1 for _ in window(body)) - len(pieces)
@@ -173,6 +232,7 @@ def build_chunks():
                     "valid_from": str(s.get("valid_from") or ""),
                     "valid_until": str(s.get("valid_until") or ""),
                     "section": section or "",
+                    "chapter": chapter or "",                                          
                     "article": art or "",
                     "part": j,
                 })
@@ -190,6 +250,13 @@ def write_jsonl(chunks):
     print(f"wrote {len(chunks)} chunks -> {out}")
 
 
+def embed_text(c: dict) -> str:
+    """Text that is embedded: act / section / chapter as a context prefix, then the chunk text.
+    The stored text (chunks.jsonl, citations) stays the plain chunk; only the vector sees the prefix."""
+    prefix = " / ".join(x for x in (c["title"], c["section"], c["chapter"]) if x)
+    return f"[{prefix}]\n{c['text']}"
+
+
 def embed_and_store(chunks):
     import chromadb
     from llama_index.core import StorageContext, VectorStoreIndex
@@ -204,7 +271,7 @@ def embed_and_store(chunks):
         pass
     collection = client.get_or_create_collection(COLLECTION)
 
-    nodes = [TextNode(id_=c["id"], text=c["text"],
+    nodes = [TextNode(id_=c["id"], text=embed_text(c),                                 
                       metadata={k: v for k, v in c.items() if k not in ("id", "text")})
              for c in chunks]
     embed = HuggingFaceEmbedding(model_name=EMBED_MODEL)
