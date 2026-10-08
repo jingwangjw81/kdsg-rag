@@ -81,7 +81,7 @@ def extract_text(pdf_path: pathlib.Path) -> str:
     boiler = {l for l, c in line_counts.items() if c >= max(3, 0.6 * n_pages)}
     boiler.update(KNOWN_BOILERPLATE)
     cleaned = ["\n".join(l for l in p.splitlines() if l.strip() not in boiler) for p in pages]
-    return join_split_headings("\n".join(cleaned))
+    return "\n".join(cleaned)
 
 
 def join_split_headings(text: str) -> str:
@@ -226,7 +226,9 @@ def split_articles(text: str):
     section becomes a 'preamble' chunk; sections without articles become one chunk (windowed later).
     The chapter is the last chapter heading before the chunk starts ('' if none)."""      
     for section, sec_text in split_sections(text):
-        sec_text = cut_toc(sec_text)
+         # join table-cell headings only now, after the history cut and the section split, so that
+         # "Änderungstabelle" headings and "Der Erlass ..." markers are still at line start when matched
+        sec_text = cut_toc(join_split_headings(sec_text))
         chapters = find_chapters(sec_text)                                            
         matches = list(ART_RE.finditer(sec_text))
         if not matches:
