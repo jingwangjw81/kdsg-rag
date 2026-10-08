@@ -33,9 +33,14 @@ TOC_RE = re.compile(r"^\s*Inhalt(?:sverzeichnis)?\s*$", re.MULTILINE)
 # chapter headings at line start, e.g. "3.2 Register- und Verzeichnispflicht" or "1. Gegenstand".
 # Paragraph numbers ("1 Die Behörde darf ...") also start with a digit; find_chapters() excludes them by
 # (a) sentence punctuation at the end, (b) a leading article/pronoun, (c) what follows the line.
-CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,80}?)\s*$")
+CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,60}?)\s*$")
 NOT_HEADING_START = re.compile(r"^(Die|Der|Das|Dies\w*|Sie|Er|Es|In|Im|Für|Bei|Folgende|Wenn|Wer|Aufgehoben)\b")
+# sentences, not headings: finite verbs, footnote citations ("DVG; BSG 109.1"), wrapped lines ending in a hyphen
+SENTENCE_HINT = re.compile(r"\b(müssen|dürfen|ist|sind|kann|können|wird|werden|gilt|gelten|hat|haben|darf|soll|sollen"
+                           r"|besteht|bestehen|erfolgt|nach Absatz)\b|;|\b(BSG|SR)\s+\d")
 PARA_RE = re.compile(r"^\s*\d+\s+\S")          # a paragraph line: digit, space, text
+# Fedlex style headings: "1. Kapitel: Begriffe" (depth 0), "3. Abschnitt: Amtshilfe" (depth 1)
+FEDLEX_LEVEL = {"Kapitel:": 0, "Abschnitt:": 1}
 
 # Section markers at line start:
 #  - ICSGW annex headings: "Anhang 2 zur ICSGW: ...", "Anhang 4 ICSGW"
@@ -54,8 +59,16 @@ HISTORY_RE = re.compile(
     re.MULTILINE,
 )
 
+# A line that is only a number ("1.", "3.2", "5.1.1") or an article label ("Art. 7"): in table-cell layouts
+# (ICSGW Anhang 6, AGB ISDS BE) the title follows on the next line and must be joined back.
+NUM_ONLY_RE = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|Art\.\s*\d+[a-z]?)\s*$")
+
 # Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
 KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
+
+# A line that is only a heading number ("1.", "5.1.1") or an article number ("Art. 3"); in
+# table-cell layouts (ICSGW Anhang 6, AGB ISDS BE) the title follows on the next line.
+NUM_ONLY_RE = re.compile(r"^\s*(\d+(?:\.\d+)*\.?|Art\.\s*\d+[a-z]?)\s*$")
 
 
 def extract_text(pdf_path: pathlib.Path) -> str:
@@ -68,7 +81,24 @@ def extract_text(pdf_path: pathlib.Path) -> str:
     boiler = {l for l, c in line_counts.items() if c >= max(3, 0.6 * n_pages)}
     boiler.update(KNOWN_BOILERPLATE)
     cleaned = ["\n".join(l for l in p.splitlines() if l.strip() not in boiler) for p in pages]
-    return "\n".join(cleaned)
+    return join_split_headings("\n".join(cleaned))
+
+
+def join_split_headings(text: str) -> str:
+    """'1.' + newline + 'Allgemeine Bestimmungen' -> '1. Allgemeine Bestimmungen', and
+    'Art. 1' + newline + 'Gegenstand' -> 'Art. 1 Gegenstand' (table-cell layout). A number-only
+    line followed by another number-only line or a blank line is left as it is."""
+    lines, out, i = text.split("\n"), [], 0
+    while i < len(lines):
+        cur = lines[i]
+        if (NUM_ONLY_RE.match(cur) and i + 1 < len(lines)
+                and lines[i + 1].strip() and not NUM_ONLY_RE.match(lines[i + 1])):
+            out.append(f"{cur.strip()} {lines[i + 1].strip()}")
+            i += 2
+        else:
+            out.append(cur)
+            i += 1
+    return "\n".join(out)
 
 
 def cut_history(text: str) -> str:
@@ -98,17 +128,17 @@ def cut_toc(text: str) -> str:
     return text
 
 
-
 def _heading_title(line: str):
     """'3.2 Register- und Verzeichnispflicht' -> ('3.2', 'Register- und Verzeichnispflicht'), else None."""
     m = CHAPTER_RE.match(line)
     if not m:
         return None
-    title = m.group(2).strip()
-    if title[-1] in ".:,;" or NOT_HEADING_START.match(title):
+    num, title = m.group(1), m.group(2).strip()
+    if "." not in num and len(num) >= 4:                       # "1000 Franken ..." is a table row, not a heading
         return None
-    return m.group(1), title
-
+    if title[-1] in ".:,;-\u00ad" or NOT_HEADING_START.match(title) or SENTENCE_HINT.search(title):
+        return None
+    return num, title
 
 
 def find_chapters(text: str):
@@ -122,29 +152,54 @@ def find_chapters(text: str):
     for l in lines:
         offsets.append(pos)
         pos += len(l) + 1
-    out = []
+    out, expected = [], 1                      # 'expected': next top-level number in article-free sections
     for i, l in enumerate(lines):
         h = _heading_title(l)
         if not h:
             continue
         following = lines[i + 1:i + 3]
         confirmed = any(ART_RE.match(x) or _heading_title(x) for x in following)
-        if not confirmed and not has_articles:
-            confirmed = any(PARA_RE.match(x) for x in following)
+        # A chapter heading sits between articles; a numbered list item inside an article
+        # ("1. Cipher Suiten" in a glossary) is preceded by article text. For such candidates the
+        # confirming article/heading must be on the very next line, which a list item's
+        # definition text never satisfies.                                              
+        prev = next((x for x in reversed(lines[:i]) if x.strip()), "")
+        structural = (not prev or _heading_title(prev) or ART_RE.match(prev) or NUM_ONLY_RE.match(prev)
+                      or SECTION_RE.match(prev) or re.match(r"^\s*\d+/\d+\s*$", prev))
+        if has_articles and not structural:
+            nxt = next((x for x in lines[i + 1:i + 4] if x.strip()), "")   # next non-blank line
+            confirmed = bool(ART_RE.match(nxt) or _heading_title(nxt))
+        if not has_articles:
+            # tables in article-free annexes have numbers in the first column; accept only headings
+            # whose top-level number continues the sequence 1, 2, 3 ...
+            top = int(h[0].split(".")[0])
+            if top != expected and "." not in h[0]:
+                continue
+            if "." not in h[0]:
+                expected = top + 1
+            confirmed = confirmed or any(PARA_RE.match(x) for x in following)
         if confirmed:
             out.append((offsets[i], f"{h[0]} {h[1]}"))
     return out
 
+
+def _depth(title: str) -> int:
+    for word, d in FEDLEX_LEVEL.items():
+        if word in title:
+            return d
+    return title.split(" ", 1)[0].count(".")
+
+
 def chapter_at(chapters, pos: int) -> str:
-    """Title of the last chapter heading that starts at or before pos ('' if none).
-    Full heading path for pos, e.g. '2 Bearbeitung von Personendaten / 2.1 Grundsätze'."""
+    """Full heading path for pos, e.g. '2 Bearbeitung von Personendaten / 2.1 Grundsätze' ('' if none).
+    Depth comes from the numbering ("2.1" is under "2") or, in Fedlex texts, from the words
+    "Kapitel:" (top) and "Abschnitt:" (below)."""
     stack = []
     for p, title in chapters:
         if p > pos:
             break
-        num = title.split(" ", 1)[0]
-        depth = num.count(".")
-        stack = stack[:depth] + [title]
+        d = _depth(title)
+        stack = stack[:d] + [title]
     return " / ".join(stack)
 
 
