@@ -9,7 +9,7 @@ data provenance, measured answer quality, robustness and traceability.
 - [x] Step 1: project set-up
 - [x] Step 2: corpus and provenance
 - [x] Step 3: ingestion
-- [ ] Step 4: baseline RAG
+- [x] Step 4: baseline RAG
 - [ ] Step 5: evaluation
 
 ## Structure
