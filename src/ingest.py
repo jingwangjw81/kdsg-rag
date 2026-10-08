@@ -135,17 +135,17 @@ def find_chapters(text: str):
             out.append((offsets[i], f"{h[0]} {h[1]}"))
     return out
 
-
-
 def chapter_at(chapters, pos: int) -> str:
-    """Title of the last chapter heading that starts at or before pos ('' if none)."""
-    current = ""
+    """Title of the last chapter heading that starts at or before pos ('' if none).
+    Full heading path for pos, e.g. '2 Bearbeitung von Personendaten / 2.1 Grundsätze'."""
+    stack = []
     for p, title in chapters:
-        if p <= pos:
-            current = title
-        else:
+        if p > pos:
             break
-    return current
+        num = title.split(" ", 1)[0]
+        depth = num.count(".")
+        stack = stack[:depth] + [title]
+    return " / ".join(stack)
 
 
 def split_sections(text: str):
