@@ -37,7 +37,7 @@ TOC_RE = re.compile(r"^\s*Inhalt(?:sverzeichnis)?\s*$", re.MULTILINE)
 
 # Paragraph numbers ("1 Die Behörde darf ...") also start with a digit; find_chapters() excludes them by
 # (a) sentence punctuation at the end, (b) a leading article/pronoun, (c) what follows the line.
-CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,60}?)\s*$")
+CHAPTER_RE = re.compile(r"^\s*(\d+(?:\.\d+)*)\.?\s+([A-ZÄÖÜ][^\n]{2,90}?)\s*$")   
 NOT_HEADING_START = re.compile(r"^(Die|Der|Das|Dies\w*|Sie|Er|Es|In|Im|Für|Bei|Folgende|Wenn|Wer|Aufgehoben)\b")
 # sentences, not headings: finite verbs, footnote citations ("DVG; BSG 109.1"), wrapped lines ending in a hyphen
 SENTENCE_HINT = re.compile(r"\b(müssen|dürfen|ist|sind|kann|können|wird|werden|gilt|gelten|hat|haben|darf|soll|sollen"
