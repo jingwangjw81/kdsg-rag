@@ -65,9 +65,17 @@ HISTORY_RE = re.compile(
 
 # Known footer/header strings that survive the repetition filter (seen in the ICSGW extraction).
 KNOWN_BOILERPLATE = ("Beschluss mit Anhang 5 und 6",)
-# A line that is only a page number ("12", "3/20"); each occurs once, so the repetition
-# filter misses it. Deleted so it cannot sit between a chapter heading and its first article.
-PAGE_NO_RE = re.compile(r"^\s*(\d{1,3}|\d+/\d+)\s*$")
+# A line that is only a number ("12") or "n/m" ("3/20"). A page number occurs once, so the
+# repetition filter misses it. Deleted so it cannot sit between a chapter heading and its first
+# article. But a bare number can also be a table value (key lengths "256", "512" in ICSGW Anhang 6)
+# or a footnote marker (DSG), so a bare number is deleted only when it equals its own page index.
+PAGE_NO_RE = re.compile(r"^\s*(\d{1,3})(?:/\d{1,3})?\s*$")
+
+
+def is_page_number(line: str, page_no: int) -> bool:
+    """True for 'n/m' lines and for a bare number equal to the 1-based page index."""
+    m = PAGE_NO_RE.match(line)
+    return bool(m) and ("/" in line or int(m.group(1)) == page_no)
 
 
 def extract_text(pdf_path: pathlib.Path) -> str:
@@ -80,8 +88,8 @@ def extract_text(pdf_path: pathlib.Path) -> str:
     boiler = {l for l, c in line_counts.items() if c >= max(3, 0.6 * n_pages)}
     boiler.update(KNOWN_BOILERPLATE)
     cleaned = ["\n".join(l for l in p.splitlines()
-                          if l.strip() not in boiler and not PAGE_NO_RE.match(l))   # drop page numbers
-               for p in pages]
+                          if l.strip() not in boiler and not is_page_number(l, i))  
+               for i, p in enumerate(pages, 1)]
     return "\n".join(cleaned)
 
 
@@ -152,7 +160,7 @@ def find_chapters(text: str):
         # definition text never satisfies.
         prev = next((x for x in reversed(lines[:i]) if x.strip()), "")
         structural = (not prev or _heading_title(prev) or ART_RE.match(prev)
-                      or SECTION_RE.match(prev) or PAGE_NO_RE.match(prev))          
+                      or SECTION_RE.match(prev) or PAGE_NO_RE.match(prev))           
         if has_articles and not structural:
             nxt = next((x for x in lines[i + 1:i + 4] if x.strip()), "")   # next non-blank line
             confirmed = bool(ART_RE.match(nxt) or _heading_title(nxt))
