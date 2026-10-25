@@ -22,13 +22,23 @@ A question-answering assistant over the revised Kantonales Datenschutzgesetz (KD
 | 10 | Audit-style report of the results | planned
 
 
-## Structure
+## Architecture
 ```
-data/raw/        official source documents + sources.yaml (provenance)
-data/processed/  cleaned chunks (generated, not committed)
-src/             pipeline code (checksums, ingest, inspect_chunks, smoke_test)
-eval/            test questions and evaluation runs
-tests/           pytest
+PDF (data/raw)
+  -> extract_text      pymupdf; repeated headers/footers and page numbers deleted
+  -> split_sections    annexes and amendment blocks become sections
+  -> find_chapters     chapter headings detected (BELEX numbering, Fedlex "Kapitel/Abschnitt")
+  -> split_articles    one chunk per article; long articles windowed (1,800 / 200 chars)
+  -> embed             intfloat/multilingual-e5-small, local CPU; embedding text is prefixed
+                       with "[act / section / chapter]" so retrieval sees the context
+  -> Chroma            persistent collection "kdsg", full metadata per chunk
+Question
+  -> retrieve          top-k by vector similarity; metadata filter excludes role=historical
+                       unless the question contains change words ("geändert", "neu", "früher" ...)
+  -> prompt            German system prompt: answer only from the passages, cite [n],
+                       refuse if the passages do not contain the answer
+  -> LLM               Gemini (gemini-3.6-flash) or Mistral, temperature 0
+  -> answer            text + source list (act, legal reference, chapter, article, status)
 ```
 
 ## Data sources
@@ -52,42 +62,47 @@ legal reference, validity dates, legal status, role in the corpus and SHA-256 ch
 | 9_AGB_ISDS_BE.pdf | AGB ISDS BE | guidance | in force, replacement announced |
 
 ## Data processing
-`src/ingest.py` turns the PDFs into chunks and a Chroma index:
-- Text extraction with pymupdf; repeated page headers/footers removed.
+Design rule: extracted text is never rewritten, only deleted. Deletions are limited to
+layout (repeated headers/footers, page numbers), amendment-history tables and tables of
+contents. Structure (sections, chapters, articles) is detected and stored as metadata; the
+chunk text stays as extracted so that every citation can be checked against the PDF.
+- Text extraction with pymupdf. Lines repeated on most pages (headers/footers) are dropped.
+A line is dropped as a page number only if it is `n/m` or a bare number equal to its own
+page index — table values (e.g. key lengths in ICSGW Anhang 6) and footnote markers stay.
 - Historical versions: the amendment-history tables at the end are cut off.
 - Sections: ICSGW annexes and "Der Erlass … wird wie folgt geändert" amendment blocks
-  become their own sections, so article numbers are unique per section.
+become their own sections, so article numbers are unique per section.
+- Chapters: numbered headings (`3`, `3.2`, Fedlex `3. Kapitel:` / `2. Abschnitt:`) are
+detected and attached to each article as a path, e.g.
+`3 Pflichten der Behörden und von beauftragten Dritten / 3.2 Register- und Verzeichnispflicht`.
+A heading is accepted only if an article or another heading follows it, which keeps
+paragraph numbers, list items, footnotes and table rows out. The chapter is metadata: for
+a heading wrapped over two PDF lines the label joins the lines, the chunk text does not.
 - Chunking: one chunk per article (`Art. N` at line start) within its section; a table of
-  contents listing articles is removed; articles longer than 1,800 characters are split
-  into overlapping windows (200 characters); pieces under 80 characters are dropped.
+contents listing articles is removed; articles longer than 1,800 characters are split
+into overlapping windows (200 characters); pieces under 80 characters are dropped.
 - Metadata per chunk: source file, act, legal reference, role, status, validity dates,
-  section, article, window index. Chunk ids are unique (`tests/test_ingest.py`).
+section, chapter, article, window index. Chunk ids are unique (`tests/test_ingest.py`).
 - Embeddings: `intfloat/multilingual-e5-small` (local, CPU); vector store: Chroma,
-  collection `kdsg`.
-
-Chunk counts (`python src/inspect_chunks.py`): 
-KDSG new 68, 
-KDSG old 43, 
-KDSV 23,
-DSV old 19, 
-ICSG 43, 
-IDSV 53, 
-DSG 81, 
-ICSGW 93, 
-AGB 10; 
-433 chunks in total.
+collection `kdsg`.
+Chunk counts (`python src/inspect_chunks.py`): KDSG new 68 · KDSG old 43 · KDSV 23 ·
+DSV old 19 · ICSG 43 · IDSV 53 · DSG 81 · ICSGW 93 · AGB 10 — 433 chunks in total.
 
 ## Limitations
-- The ICSGW annexes 1–4 and the AGB ISDS BE are laid out as tables; clause numbers and
-  titles are not recoverable from plain-text extraction, so these sections are indexed as
-  1,800-character windows rather than clause-level chunks. Citations into them name the
-  section and window, not the clause.
+- The ICSGW annexes and the AGB ISDS BE are laid out as tables; clause numbers and
+titles are not recoverable from plain-text extraction, so these sections are indexed as
+1,800-character windows rather than clause-level chunks and carry no chapter. Citations
+into them name the section and window, not the clause.
+- A BELEX chapter heading wrapped over two lines without a keyword is not detected (KDSV
+chapter 4, Art. 12–15, is labelled with chapter 3). Fedlex headings are detected even
+when wrapped, because `Kapitel:` / `Abschnitt:` is unambiguous.
+- The page-number rule deletes one footnote marker that coincides with page 1 of the DSG;
+no article text is affected.
 - The ICSG and IDSV files are the adopted texts before publication in the BSG
-  (numbers pending); they are to be replaced by the published versions after 2026-11-01.
+(numbers pending); they are to be replaced by the published versions after 2026-11-01.
 - The assistant answers from the versions listed in `sources.yaml` and knows nothing
-  about later changes.
+about later changes. Answer quality has not yet been measured (step 5).
 
 ## Reproducibility
-Dependencies are declared in `requirements.txt`; exact versions that passed the smoke
-test are in `requirements.lock`. Source versions are pinned in `sources.yaml`; model
+- Dependencies are declared in `requirements.txt`; source versions are pinned in `sources.yaml`; model
 names are recorded in `src/ingest.py` and, from step 5, with each evaluation run.
