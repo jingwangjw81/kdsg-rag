@@ -1,16 +1,26 @@
 # kdsg-rag — an auditable RAG assistant for the revised Bern data protection law
 
-Work in progress. A question-answering assistant over the revised Kantonales
-Datenschutzgesetz (KDSG) and related texts, built with retrieval-augmented
-generation and documented the way an auditor would examine an AI system:
-data provenance, measured answer quality, robustness and traceability.
+A question-answering assistant over the revised Kantonales Datenschutzgesetz (KDSG) of the Canton of Bern and related texts, built with retrieval-augmented generation and documented the way an auditor would examine an AI system: data provenance, measured answer quality, robustness and traceability. Work in progress; the baseline system works end to end.
+
+## What it does today
+- Ask a question in German, then the assistant answers only from the indexed legal texts, cites every statement with `[n]`, and names act, legal reference, chapter, article and legal status for each source. 
+- Superseded versions are excluded from retrieval unless the question is about what changed. 
+- Questions outside the corpus are refused rather than guessed. 
 
 ## Status
-- [x] Step 1: project set-up
-- [x] Step 2: corpus and provenance
-- [x] Step 3: ingestion
-- [x] Step 4: baseline RAG
-- [ ] Step 5: evaluation
+| Step | Content | State |
+|---|---|---|
+| 1 | Project set-up (Codespaces, dependencies, smoke test of both LLM providers) | done
+| 2 | Corpus and provenance (`sources.yaml`, checksums, tests) | done
+| 3 | Ingestion: article-level chunking with section and chapter metadata | done
+| 4 | Baseline RAG: retrieval with legal-status filter, cited answers, refusal | in progress
+| 5 | Evaluation: 30–50 German test questions incl. change and out-of-scope questions; RAGAS metrics (faithfulness, answer relevance, context precision/recall); over-/under-refusal | planned
+| 6 | Robustness: paraphrases, adversarial and ambiguous questions | planned
+| 7 | Traceability: per-answer log of question, retrieved chunks, model, prompt version | planned
+| 8 | Streamlit UI | planned
+| 9 | Model comparison (Gemini vs. Mistral) on the evaluation set | planned
+| 10 | Audit-style report of the results | planned
+
 
 ## Structure
 ```
