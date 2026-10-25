@@ -37,7 +37,7 @@ Question
                        unless the question contains change words ("geändert", "neu", "früher" ...)
   -> prompt            German system prompt: answer only from the passages, cite [n],
                        refuse if the passages do not contain the answer
-  -> LLM               Gemini (gemini-3.6-flash) or Mistral, temperature 0
+  -> LLM               Gemini (gemini-3.6-flash) or Mistral (codestral-2508; a general Mistral model is to be compared in step 9), temperature 0
   -> answer            text + source list (act, legal reference, chapter, article, status)
 ```
 
