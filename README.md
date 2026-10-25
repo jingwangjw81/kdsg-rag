@@ -27,7 +27,7 @@ A question-answering assistant over the revised Kantonales Datenschutzgesetz (KD
 PDF (data/raw)
   -> extract_text      pymupdf; repeated headers/footers and page numbers deleted
   -> split_sections    annexes and amendment blocks become sections
-  -> find_chapters     chapter headings detected (BELEX numbering, Fedlex "Kapitel/Abschnitt")
+  -> find_chapters     numbered chapter headings detected and attached to each article
   -> split_articles    one chunk per article; long articles windowed (1,800 / 200 chars)
   -> embed             intfloat/multilingual-e5-small, local CPU; embedding text is prefixed
                        with "[act / section / chapter]" so retrieval sees the context
@@ -76,8 +76,7 @@ become their own sections, so article numbers are unique per section.
 detected and attached to each article as a path, e.g.
 `3 Pflichten der Behörden und von beauftragten Dritten / 3.2 Register- und Verzeichnispflicht`.
 A heading is accepted only if an article or another heading follows it, which keeps
-paragraph numbers, list items, footnotes and table rows out. The chapter is metadata: for
-a heading wrapped over two PDF lines the label joins the lines, the chunk text does not.
+paragraph numbers, list items, footnotes and table rows out. The chapter is metadata; the chunk text is not changed.
 - Chunking: one chunk per article (`Art. N` at line start) within its section; a table of
 contents listing articles is removed; articles longer than 1,800 characters are split
 into overlapping windows (200 characters); pieces under 80 characters are dropped.
@@ -93,9 +92,10 @@ DSV old 19 · ICSG 43 · IDSV 53 · DSG 81 · ICSGW 93 · AGB 10 — 433 chunks 
 titles are not recoverable from plain-text extraction, so these sections are indexed as
 1,800-character windows rather than clause-level chunks and carry no chapter. Citations
 into them name the section and window, not the clause.
-- A BELEX chapter heading wrapped over two lines without a keyword is not detected (KDSV
-chapter 4, Art. 12–15, is labelled with chapter 3). Fedlex headings are detected even
-when wrapped, because `Kapitel:` / `Abschnitt:` is unambiguous.
+- Chapter headings wrapped over two PDF lines are not detected: KDSV
+chapter 4 (Art. 12–15) and in the DSG the 1., 5., 6. and 7. Kapitel and two Abschnitte.
+The affected articles carry the preceding chapter. Headings on one line are detected regardless
+of length. 
 - The page-number rule deletes one footnote marker that coincides with page 1 of the DSG;
 no article text is affected.
 - The ICSG and IDSV files are the adopted texts before publication in the BSG
