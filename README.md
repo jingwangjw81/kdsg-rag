@@ -72,7 +72,7 @@ page index — table values (e.g. key lengths in ICSGW Anhang 6) and footnote ma
 - Historical versions: the amendment-history tables at the end are cut off.
 - Sections: ICSGW annexes and "Der Erlass … wird wie folgt geändert" amendment blocks
 become their own sections, so article numbers are unique per section.
-- Chapters: numbered headings (`3`, `3.2`, Fedlex `3. Kapitel:` / `2. Abschnitt:`) are
+- Chapters: numbered headings (`3`, `3.2`, Fedlex `2. Kapitel:...` / `1. Abschnitt:...`on one line) are
 detected and attached to each article as a path, e.g.
 `3 Pflichten der Behörden und von beauftragten Dritten / 3.2 Register- und Verzeichnispflicht`.
 A heading is accepted only if an article or another heading follows it, which keeps
